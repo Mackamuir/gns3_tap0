@@ -47,19 +47,33 @@ if [ ! -f $script_path ]; then
     cat > $script_path << 'EOF'
 #!/bin/bash
 
-# Create and configure the network interfaces
-sudo tunctl -t tap0
-sudo ifconfig tap0 0.0.0.0 promisc up
-sudo ifconfig eth1 0.0.0.0 promisc up
+# Counter for naming taps and bridges
+count=0
 
-# Create the bridge and add interfaces to it
-sudo brctl addbr br0
-sudo brctl addif br0 tap0
-sudo brctl addif br0 eth1
+# Loop through all interfaces except lo and eth0
+for iface in $(ls /sys/class/net | grep -vE '^(lo|eth0|br|tap)'); do
+    tap="tap${count}"
+    bridge="br${count}"
 
-# Bring up the bridge and tap interfaces
-sudo ifconfig br0 up
-sudo ifconfig tap0 up
+    echo "Setting up $bridge with $iface and $tap..."
+
+    # Create tap
+    sudo tunctl -t "$tap"
+    sudo ifconfig "$tap" 0.0.0.0 promisc up
+
+    # Set physical interface to promisc
+    sudo ifconfig "$iface" 0.0.0.0 promisc up
+
+    # Create bridge
+    sudo brctl addbr "$bridge"
+    sudo brctl addif "$bridge" "$tap"
+    sudo brctl addif "$bridge" "$iface"
+
+    # Bring up bridge
+    sudo ifconfig "$bridge" up
+
+    ((count++))
+done
 EOF
 
     chmod +x $script_path
