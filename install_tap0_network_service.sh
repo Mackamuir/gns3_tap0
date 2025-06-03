@@ -48,7 +48,7 @@ if [ ! -f $script_path ]; then
 #!/bin/bash
 
 # Counter for naming taps and bridges
-count=0
+count=1
 
 # Loop through all interfaces except lo and eth0
 for iface in $(ls /sys/class/net | grep -vE '^(lo|eth0|br|tap|docker0|virbr0)'); do
