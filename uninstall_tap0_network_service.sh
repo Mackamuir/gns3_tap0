@@ -12,33 +12,37 @@ NC='\033[0m' # No Color
 script_path="/usr/local/bin/setup_network.sh"
 service_path="/etc/systemd/system/setup_network.service"
 
-# Function to remove network setup
+# Function to remove all dynamically created bridges and taps
 remove_setup_network() {
     echo -e "${RED}→ ${WHITE}Removing network setup... ${PURPLE}[50%]${NC}"
 
-    # Check if tap0 and br0 interfaces exist, and remove them
-    if ip link show tap0 &> /dev/null; then
-        sudo tunctl -d tap0
-    fi
+    # Remove all tap interfaces
+    for tap in $(ip -o link show | awk -F': ' '{print $2}' | grep -E '^tap[0-9]+$'); do
+        echo -e "${YELLOW}Removing TAP interface: $tap${NC}"
+        sudo ip link set "$tap" down 2>/dev/null
+        sudo tunctl -d "$tap" 2>/dev/null
+    done
 
-    if ip link show br0 &> /dev/null; then
-        sudo ifconfig br0 down
-        sudo brctl delbr br0
-    fi
+    # Remove all bridges named br[0-9]+
+    for br in $(brctl show | awk 'NR>1 {print $1}' | grep -E '^br[0-9]+$'); do
+        echo -e "${YELLOW}Removing bridge: $br${NC}"
+        sudo ip link set "$br" down 2>/dev/null
+        sudo brctl delbr "$br" 2>/dev/null
+    done
 }
 
 # Step 1: Remove systemd service
 echo -e "${RED}→ ${WHITE}Step 1/4 ${YELLOW}Removing systemd service... ${PURPLE}[25%]${NC}"
 sudo systemctl disable setup_network.service &> /dev/null
-sudo rm -f $service_path
+sudo rm -f "$service_path"
 sudo systemctl daemon-reload
 sudo systemctl reset-failed
 
 # Step 2: Remove network setup script
 echo -e "${RED}→ ${WHITE}Step 2/4 ${YELLOW}Removing network setup script... ${PURPLE}[50%]${NC}"
-sudo rm -f $script_path
+sudo rm -f "$script_path"
 
-# Step 3: Removing networking setup
+# Step 3: Remove networking setup
 remove_setup_network
 
 # Step 4: Remove installed packages
