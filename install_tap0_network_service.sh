@@ -51,7 +51,7 @@ if [ ! -f $script_path ]; then
 count=0
 
 # Loop through all interfaces except lo and eth0
-for iface in $(ls /sys/class/net | grep -vE '^(lo|eth0|br|tap)'); do
+for iface in $(ls /sys/class/net | grep -vE '^(lo|eth0|br|tap|docker0|virbr0)'); do
     tap="tap${count}"
     bridge="br${count}"
 
